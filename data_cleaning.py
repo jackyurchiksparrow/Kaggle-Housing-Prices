@@ -1,6 +1,6 @@
 import pandas as pd
-#import numpy as np
-#from sklearn.preprocessing import OneHotEncoder
+import numpy as np
+from sklearn.preprocessing import OneHotEncoder
 import seaborn as sns
 import matplotlib.pyplot as plt
 #from scipy import stats
@@ -290,6 +290,9 @@ df['LotArea'] = df.loc[df['LotArea']<60000]['LotArea']
 
 
 get_categorical_stats('LotShape')
+LotShape_dict = {'Reg': 0, 'IR1': 1, 'IR2': 2, 'IR3': 3}
+df['LotShape'] = [LotShape_dict[l] for l in df['LotShape']]
+
 get_categorical_stats('LandContour')
 get_categorical_stats('LotConfig')
 get_categorical_stats('LandSlope')
@@ -310,8 +313,8 @@ barplot_the_y_by_x(df['LandSlope'], df['SalePrice'], "LandSlope", "SalePrice")
 # Street: should be nominal; no nulls
 # Alley: should be nominal; nulls are present
 # Neighborhood: should be nominal; no nulls
-# Condition1: should be nominal; no nulls
-# Condition2: should be nominal; no nulls
+# Condition1: condition1 and condition2 have the same values, nominal should be only one
+# Condition2: condition1 and condition2 have the same values, nominal should be only one
     
 get_categorical_stats('Street')
 
@@ -330,6 +333,35 @@ barplot_the_y_by_x(df['Alley'], df['SalePrice'], "Alley", "SalePrice")
 # paves are better, but may not play a role
 barplot_the_y_by_x(df['Neighborhood'], df['SalePrice'], "Neighborhood", "SalePrice")
 # best are North Ames, College Creek and Old Town
+
+# condition1 and condition2 have the same values, nominal should be only one
+encoder = OneHotEncoder() # Initialize the OneHotEncoder
+
+encoded_cond1 = encoder.fit_transform(df[['Condition1']])
+original_cond1_names = encoder.get_feature_names_out(['Condition1'])
+encoded_cond1_df = pd.DataFrame(encoded_cond1.toarray(), columns=original_cond1_names)
+
+encoded_cond2 = encoder.fit_transform(df[['Condition2']])
+original_cond2_names = encoder.get_feature_names_out(['Condition2'])
+encoded_cond2_df = pd.DataFrame(encoded_cond2.toarray(), columns=original_cond2_names)
+
+def df_union(df1, df2, prefix2, on=1):
+    combined_df = df1.copy()
+    
+    for i, row in df1.iterrows():
+        for col_name, _ in row.items():
+            df2_col_name = prefix2+"_"+col_name.split("_")[1]
+            if df2_col_name in df2.columns.values:
+                if df2.loc[i][df2_col_name] == 1:
+                    combined_df.loc[i][col_name] = 1
+        
+    return combined_df
+
+
+encoded_conditions_df = df_union(encoded_cond1_df, encoded_cond2_df, "Condition2")
+df = df.drop(["Condition1", 'Condition2'], axis=1)
+df = df.append(encoded_conditions_df, ignore_index=True)
+
 barplot_the_y_by_x(df['Condition1'], df['SalePrice'], "Condition1", "SalePrice")
 # best is Adjacent to postive off-site feature
 barplot_the_y_by_x(df['Condition2'], df['SalePrice'], "Condition2", "SalePrice")
@@ -340,31 +372,30 @@ barplot_the_y_by_x(df['Condition2'], df['SalePrice'], "Condition2", "SalePrice")
 # YearBuilt: continuous; no nulls, exponential  distribution, outliers are present
 # YearRemodAdd: needs to be simplified to nominal yes/no; no nulls
 # MoSold: useless
-# YrSold: useless
+# YrSold: we will use it to compute house age at the moment of selling
     
 get_categorical_stats('YearBuilt')
 get_categorical_stats('YearRemodAdd')
 get_categorical_stats('MoSold')
 get_categorical_stats('YrSold')
 
+df['HouseAge'] = df['YrSold'] - df['YearBuilt']
+df = df.drop('YrSold', axis=1)
+df = df.drop('MoSold', axis=1)
+df = df.drop('YearBuilt', axis=1)
+
 
 fig, ax = plt.subplots()
-sns.barplot(x=df['YearBuilt'], y=df['SalePrice'], ax=ax, errorbar=None)
+sns.barplot(x=df['HouseAge'], y=df['SalePrice'], ax=ax, errorbar=None)
 ax.set_xticks(ax.get_xticks()[::10])
-ax.set_xlabel('YearBuilt')
+ax.set_xlabel('HouseAge')
 ax.set_ylabel('SalePrice')
-ax.set_title("SalePrice by YearBuilt")
+ax.set_title("SalePrice by HouseAge")
 plt.show()
 # the less the age the bigger the price
-plt.hist(df['YearBuilt'], bins=31, edgecolor="black")
-plt.xlabel('YearBuilt')
-plt.ylabel('Frequency')
-plt.title('Distribution of YearBuilt')
-plt.show()
 
-df = df[~((df['YearBuilt'].between(1872, 1904)) & (df['SalePrice'] > 280000))]
-df = df[~((df['YearBuilt'].between(1927, 1938)) & (df['SalePrice'] > 200000))]
-df = df[~((df['YearBuilt'].between(1980, 1985)) & (df['SalePrice'] > 240000))]
+
+
 
 # YearRemodAdd is the same if there was no remodelling, so we will make 2
 # new columns it was (1) or wasn't (0) remodelled and drop this one
@@ -376,10 +407,10 @@ barplot_the_y_by_x(df['isRemodelled'], df['SalePrice'], "isRemodelled", "SalePri
 # it may not be useful in the model
 barplot_the_y_by_x(df['MoSold'], df['SalePrice'], "MoSold", "SalePrice")
 # useless
-df = df.drop('MoSold', axis=1)
+
 barplot_the_y_by_x(df['YrSold'], df['SalePrice'], "YrSold", "SalePrice")
 # useless
-df = df.drop('YrSold', axis=1)  
+
 
 #                   --- Exterior design and material quality ---
 # RoofStyle: should be nominal, no nulls
@@ -488,6 +519,9 @@ get_categorical_stats('BsmtFullBath')
 get_categorical_stats('BsmtHalfBath')
 get_categorical_stats('TotalBsmtSF')
 
+# basement quality, condition, exposure, BsmtFinType1, BsmtFinType2 have
+# redundant information 'no basement'
+# create new column and make those columns ordinal
      
 barplot_the_y_by_x(df['BsmtQual'], df['SalePrice'], "BsmtQual", "SalePrice")
 # best is excellent
@@ -500,9 +534,7 @@ df['BsmtCond'] = df['BsmtCond'].fillna(0)
 barplot_the_y_by_x(df['BsmtExposure'], df['SalePrice'], "BsmtExposure", "SalePrice")
 # nulls here are 'no basement'
 df['BsmtExposure'] = df['BsmtExposure'].fillna(0)
-# basement quality, condition, exposure, BsmtFinType1, BsmtFinType2 have
-# redundant information 'no basement'
-# create new column and make those columns ordinal
+
 df['isBasement'] = df['BsmtExposure'].apply(lambda x: 0 if x=="NA" else 1)
 #df['BsmtQual'] = 
 
