@@ -5,6 +5,16 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 #from scipy import stats
 
+# 1. Dealing with missing values: Handle missing values in your dataset using appropriate techniques such as imputation or deletion.
+
+# 2. Dealing with categorical variables: Convert categorical variables into numerical representations using techniques such as one-hot encoding or label encoding.
+
+# 3. Standardization: Standardize numerical variables to have zero mean and unit variance. This step helps ensure that variables are on a similar scale and prevents variables with larger magnitudes from dominating the analysis.
+
+# 4. Handling outliers: Identify and handle outliers in your dataset using techniques such as Winsorization, trimming, or imputation.
+
+# 5. Variable selection: Once you have handled missing values, categorical variables, and performed standardization, you can then assess the correlations between variables and decide which variables to remove if they are highly correlated.
+
 # 1 group the data ------------------------------------------------------------
 
 #                   --- house type ---
@@ -291,7 +301,7 @@ df['LotArea'] = df.loc[df['LotArea']<60000]['LotArea']
 
 get_categorical_stats('LotShape')
 LotShape_dict = {'Reg': 0, 'IR1': 1, 'IR2': 2, 'IR3': 3}
-df['LotShape'] = [LotShape_dict[l] for l in df['LotShape']]
+df['LotShape'] = df['LotShape'].map(LotShape_dict)
 
 get_categorical_stats('LandContour')
 get_categorical_stats('LotConfig')
