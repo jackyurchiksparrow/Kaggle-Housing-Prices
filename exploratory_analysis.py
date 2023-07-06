@@ -17,6 +17,7 @@ def get_categorical_stats(col_name):
     print()
 
 def barplot_the_salePrice_by_x(x, x_label, x_ticks_step=0, rotation=0, figsize=(8,6)):
+    print(x.value_counts())
     fig, ax = plt.subplots(figsize=figsize)
     sns.barplot(x=x.dropna(), y=df['SalePrice'].dropna(), ax=ax, errorbar=('ci', False))
     
@@ -230,14 +231,37 @@ barplot_the_salePrice_by_x(df['Functional'], "Functional")
 # 2ndFlrSF: Second floor square feet
 # LowQualFinSF: Low quality finished square feet (all floors)
 # GrLivArea: Above grade (ground) living area square feet
+barplot_the_salePrice_by_x(df['1stFlrSF'], "1stFlrSF", x_ticks_step=30, rotation=15, figsize=(10,6))
+# larger square feet - higher price
+barplot_the_salePrice_by_x(df['2ndFlrSF'], "2ndFlrSF", x_ticks_step=30, rotation=15, figsize=(10,6))
+# larger square feet - higher price
+barplot_the_salePrice_by_x(df['LowQualFinSF'], "LowQualFinSF", x_ticks_step=2)
+# not obvious
+barplot_the_salePrice_by_x(df['GrLivArea'], "GrLivArea", x_ticks_step=35, rotation=15, figsize=(10,6))
+# larger square feet - higher price
+
+
 
 #                   --- Rooms count and quality ---
 # FullBath: Full bathrooms above grade
 # HalfBath: Half baths above grade
-# Bedroom: Number of bedrooms above basement level
-# Kitchen: Number of kitchens
+# BedroomAbvGr: Number of bedrooms above basement level
+# KitchenAbvGr: Number of kitchens above basement level
 # KitchenQual: Kitchen quality
 # TotRmsAbvGrd: Total rooms above grade (does not include bathrooms)
+barplot_the_salePrice_by_x(df['FullBath'], "FullBath")
+# not obvious
+barplot_the_salePrice_by_x(df['HalfBath'], "HalfBath")
+# not obvious
+barplot_the_salePrice_by_x(df['BedroomAbvGr'], "BedroomAbvGr")
+# 4 is optimal 
+barplot_the_salePrice_by_x(df['KitchenAbvGr'], "KitchenAbvGr")
+# 1 is the best
+barplot_the_salePrice_by_x(df['KitchenQual'], "KitchenQual")
+# better quality - higher price
+barplot_the_salePrice_by_x(df['TotRmsAbvGrd'], "TotRmsAbvGrd")
+# optimal number is 10-11
+
 
 #                   --- Garage(s) ---
 # GarageType: Garage location
@@ -247,10 +271,28 @@ barplot_the_salePrice_by_x(df['Functional'], "Functional")
 # GarageArea: Size of garage in square feet
 # GarageQual: Garage quality
 # GarageCond: Garage condition
+barplot_the_salePrice_by_x(df['GarageType'], "GarageType")
+# built in is the best 
+barplot_the_salePrice_by_x(df['GarageYrBlt'], "GarageYrBlt", x_ticks_step=10, rotation=15, figsize=(10,6))
+# more modern garages costs more 
+barplot_the_salePrice_by_x(df['GarageFinish'], "GarageFinish")
+# finished garage(s) is the best option 
+barplot_the_salePrice_by_x(df['GarageCars'], "GarageCars")
+# 3 is the best
+barplot_the_salePrice_by_x(df['GarageArea'], "GarageArea", x_ticks_step=20, rotation=15, figsize=(10,6))
+# larger square feet - higher price
+barplot_the_salePrice_by_x(df['GarageQual'], "GarageQual")
+# better quality - higher price
+barplot_the_salePrice_by_x(df['GarageCond'], "GarageCond")
+# good and typical/average are optimal choices 
 
 #                   --- Pool ---
 # PoolArea: Pool area in square feet
 # PoolQC: Pool quality
+barplot_the_salePrice_by_x(df['PoolArea'], "PoolArea")
+# no pool is the most popular
+barplot_the_salePrice_by_x(df['PoolQC'], "PoolQC")
+# better quality - higher price
 
 #                   --- Porch ---
 # WoodDeckSF: Wood deck area in square feet
@@ -258,21 +300,58 @@ barplot_the_salePrice_by_x(df['Functional'], "Functional")
 # EnclosedPorch: Enclosed porch area in square feet
 # 3SsnPorch: Three season porch area in square feet
 # ScreenPorch: Screen porch area in square feet
+barplot_the_salePrice_by_x(df['WoodDeckSF'], "WoodDeckSF", x_ticks_step=20, rotation=15, figsize=(10,6))
+# higher price for bigger s.f.
+barplot_the_salePrice_by_x(df['OpenPorchSF'], "OpenPorchSF", x_ticks_step=20, rotation=15, figsize=(10,6))
+# small are more preferable
+barplot_the_salePrice_by_x(df['EnclosedPorch'], "EnclosedPorch", x_ticks_step=20, rotation=15, figsize=(10,6))
+# not obvious
+barplot_the_salePrice_by_x(df['3SsnPorch'], "3SsnPorch")
+# not obvious
+barplot_the_salePrice_by_x(df['ScreenPorch'], "ScreenPorch", x_ticks_step=10)
+# not obvious
 
 
 #                   --- Other ---
 # MiscFeature: Miscellaneous feature not covered in other categories
 # MiscVal: $Value of miscellaneous feature
+barplot_the_salePrice_by_x(df['MiscFeature'], "MiscFeature")
+# make a shed separate column for Shed with value from MiscVal AND
+# a bool column for Shed (1 - has shed, 0 - doesn't) then we'll see
+# on correlation which one we will leave
+# and delete 'MiscFeature' and 'MiscVal' columns
+df['ShedSF'] = df.apply(lambda x: x['MiscVal'] if x['MiscFeature']=='Shed' else 0, axis=1)
+df['isShed'] = df['MiscFeature'].apply(lambda x: 1 if x=='Shed' else 0)
+df.drop(['MiscFeature', 'MiscVal'], axis=1, inplace=True)
+barplot_the_salePrice_by_x(df['MiscVal'], "MiscVal", x_ticks_step=2)
+# meaningless data
+
 
 #                   --- Sale ---
 # SaleType: Type of sale
 # SaleCondition: Condition of sale
+barplot_the_salePrice_by_x(df['SaleType'], "SaleType")
+# 'Warranty Deed - Conventional' is the most common, but 'Home just constructed and sold' and
+# 'Contract 15% Down payment regular terms' are the most expensive
+barplot_the_salePrice_by_x(df['SaleCondition'], "SaleCondition")
+# 'Normal Sale' is the most common, but 'Home was not completed when last assessed 
+# (associated with New Homes)' is the most expensive
 
 #                   --- Target variable ---
 # SalePrice - sale price in dollars; target variable
+plt.hist(df['SalePrice'], bins=31, edgecolor="black")
+plt.xlabel('SalePrice')
+plt.ylabel('Frequency')
+plt.title('Distribution of SalePrice')
+plt.show()
+#normal distribution, outliers are present, no nulls
 
+# combine condition 1 and condition 2 (no nulls)
 
+# year remodelled is the same as construction date if not remodelled
+# we should deal with it
 
+# combine Exterior1st and Exterior2nd (no nulls)
 
 
 
