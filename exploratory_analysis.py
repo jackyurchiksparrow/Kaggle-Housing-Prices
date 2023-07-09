@@ -3,7 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
-df = pd.read_csv("train.csv", index_col="Id")
+df = pd.read_csv("Original_datasets/train.csv", index_col="Id")
 df_test = pd.read_csv("Original_datasets/test.csv", index_col="Id")
 
 df.describe()
