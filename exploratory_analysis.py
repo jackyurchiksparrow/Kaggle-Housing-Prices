@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 
 df = pd.read_csv("train.csv", index_col="Id")
+df_test = pd.read_csv("Original_datasets/test.csv", index_col="Id")
 
 df.describe()
 
@@ -122,6 +123,21 @@ df['HouseAge'] = df['YrSold'] - df['YearBuilt']
 barplot_the_salePrice_by_x(df['HouseAge'], "HouseAge", x_ticks_step=5, rotation=45)
 # the younger the house the bigger the price
 df.drop(['MoSold', 'YrSold'], axis=1, inplace=True)
+
+# year remodelled is the same as construction date if not remodelled
+# we should deal with it
+# first, check if there is any sense to make 2 columns
+df[df['YearRemodAdd']==df['YearBuilt']] # 764 rows
+df[df['YearRemodAdd']!=df['YearBuilt']] # 696 rows
+# thus, we will make two columns and later leave the one with higher collinearity coefficient
+df['isRemodelled'] = df.apply(lambda x: 0 if x['YearRemodAdd'] == x['YearBuilt'] else 1, axis=1)
+df['RemodelledYearsAgo'] = df['YearRemodAdd']-df['YearBuilt']
+
+
+barplot_the_salePrice_by_x(df['isRemodelled'], "isRemodelled")
+# doesn't help in predicting
+barplot_the_salePrice_by_x(df['RemodelledYearsAgo'], "RemodelledYearsAgo", x_ticks_step=5)
+# price keeps decreasing with increasing of years remodelled (possible strong negative correlation)
 
 #                   --- Exterior design and material quality ---
 # RoofStyle: Type of roof
@@ -322,9 +338,8 @@ barplot_the_salePrice_by_x(df['MiscFeature'], "MiscFeature")
 # and delete 'MiscFeature' and 'MiscVal' columns
 df['ShedSF'] = df.apply(lambda x: x['MiscVal'] if x['MiscFeature']=='Shed' else 0, axis=1)
 df['isShed'] = df['MiscFeature'].apply(lambda x: 1 if x=='Shed' else 0)
+barplot_the_salePrice_by_x(df['MiscVal'], "MiscVal", x_ticks_step=2) # meaningless data
 df.drop(['MiscFeature', 'MiscVal'], axis=1, inplace=True)
-barplot_the_salePrice_by_x(df['MiscVal'], "MiscVal", x_ticks_step=2)
-# meaningless data
 
 
 #                   --- Sale ---
@@ -346,12 +361,8 @@ plt.title('Distribution of SalePrice')
 plt.show()
 #normal distribution, outliers are present, no nulls
 
-# combine condition 1 and condition 2 (no nulls)
-
-# year remodelled is the same as construction date if not remodelled
-# we should deal with it
-
-# combine Exterior1st and Exterior2nd (no nulls)
+df.to_csv('Post_EDA_datasets/train.csv', index=False)
+df_test.to_csv('Post_EDA_datasets/test.csv', index=False)
 
 
 
