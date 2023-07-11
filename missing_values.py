@@ -15,6 +15,7 @@ def get_nulls(df):
 
 df_nulls = get_nulls(df)
 
+sns.displot(data=scores_data).set(title="Distribution of Scores", xlabel="Scores")
 # 'PoolQC' - 
 
 # 'MiscFeature' - 

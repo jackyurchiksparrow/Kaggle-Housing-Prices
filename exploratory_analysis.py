@@ -1,3 +1,11 @@
+# 1. Exploratoory analysis
+# 2. Handling outliers: Identify and handle outliers in your dataset using techniques such as Winsorization, trimming, or imputation.
+# 3. Dealing with missing values: Handle missing values in your dataset using appropriate techniques such as imputation or deletion.
+# 4. Dealing with categorical variables: Convert categorical variables into numerical representations using techniques such as one-hot encoding or label encoding.
+# 5. Standardization: Standardize numerical variables to have zero mean and unit variance. This step helps ensure that variables are on a similar scale and prevents variables with larger magnitudes from dominating the analysis.
+# 6. Variable selection: Once you have handled missing values, categorical variables, standardization, and outliers, you can then assess the correlations between variables and decide which variables to remove if they are highly correlated.
+
+
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
