@@ -2,7 +2,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-df = pd.read_csv("Original_datasets/train.csv", index_col="Id")
+df = pd.read_csv("Post_outliers_datasets/train.csv")
+df_test = pd.read_csv("Post_outliers_datasets/test.csv")
 
 def get_nulls(df):
     null_columns = df.isnull().sum()
@@ -15,8 +16,10 @@ def get_nulls(df):
 
 df_nulls = get_nulls(df)
 
-sns.displot(data=scores_data).set(title="Distribution of Scores", xlabel="Scores")
-# 'PoolQC' - 
+sns.displot(data=df['PoolQC']).set(title="Distribution of Scores", xlabel="Scores")
+# 'PoolQC' - more than 99% missing data, only 2 non-null values, exclude it
+df.drop('PoolQC', axis=1, inplace=True)
+df_test.drop('PoolQC', axis=1, inplace=True)
 
 # 'MiscFeature' - 
 # 'Alley' - 
