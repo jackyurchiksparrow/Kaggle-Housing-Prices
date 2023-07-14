@@ -18,6 +18,36 @@ def get_nulls(df):
 df_nulls = get_nulls(df)
 df_nulls_test = get_nulls(df_test)
 
+# PLAN
+# 1. Handle obvious nulls
+# 1. Identify the variables with null values: Determine which variables in your dataset have null values that you want to impute.
+
+# 2. Separate the variables: Split your dataset into two parts - one with the variables that need imputation and another with the variables that are complete.
+
+# 3. Impute missing values: Apply IterativeImputer on the part of the dataset containing the variables with null values. This will use the observed relationships in the complete variables to impute the missing values in the target variables.
+
+# 4. Merge the datasets: Once the missing values are imputed, merge the imputed dataset with the complete dataset to have a complete dataset with all the variables.
+
+# 5. Proceed with further analysis or modeling: Now that you have a complete dataset, you can proceed with your analysis or build a predictive model using the imputed values.
+#python
+#from sklearn.experimental import enable_iterative_imputer
+#from sklearn.impute import IterativeImputer
+
+# Assuming X_train is your training data with non-null columns
+# and X_test is your testing data with null columns
+
+# Create an instance of IterativeImputer
+#imputer = IterativeImputer()
+
+# Fit the imputer on the training data
+#imputer.fit(X_train)
+
+# Impute the null values in the testing data
+#X_test_imputed = imputer.transform(X_test)
+
+# X_test_imputed now contains the testing data with imputed values
+
+# 2. Unobvious ones will be handled after categories are resolved
 
 # 'PoolQC' - more than 99% missing data, only 2 non-null values, exclude it
 df.drop('PoolQC', axis=1, inplace=True)
@@ -68,6 +98,9 @@ df_test['LotFrontage'] = imputer_mean.fit_transform(df_test[['LotFrontage']])
 
 df_nulls = get_nulls(df)
 df_nulls_test = get_nulls(df_test)
+
+
+# FIRTHER ANALYSIS PAUSED UNTIL WE'RE DONE WITH CATEGORICAL VALUES
 
 
 # --- 'GarageType', 'GarageYrBlt', 'GarageFinish', 'GarageQual', 'GarageCond' all
@@ -155,12 +188,46 @@ df.drop(df[df['Electrical'].isnull()].index, inplace=True)
 df_nulls = get_nulls(df) # no more nulls here
 df_nulls_test = get_nulls(df_test) # 14 more columns here
 
+# MSZoning - 0.27% (4/1453)
+tmp=df_test[df_test['MSZoning'].isnull()==True].T
+tmp2 = df[df['LotArea']>=31250]
+df_test['LotArea'] = pd.to_numeric(df_test['LotArea'], errors='coerce')
+tmp3=df_test[df_test['LotArea']>=31250]
+
+
+tmp2 = df[(df['LotArea']>=31250) & (df['LotFrontage']>=68)]
+df_test['LotArea'] = pd.to_numeric(df_test['LotArea'], errors='coerce')
+df_test['LotFrontage'] = pd.to_numeric(df_test['LotFrontage'], errors='coerce')
+
+tmp3=df_test[(df_test['LotArea']>=31250) & (df_test['LotFrontage']>=68)]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # GarageYrBlt - 5.36% (78/1453)
 # GarageFinish - 5.36% (78/1453)
 # GarageQual - 5.36% (78/1453)
 # GarageCond - 5.36% (78/1453)
 # GarageType - 5.23% (76/1453)
+# GarageCars - 0.06% (1/1453)
+# GarageArea - 0.06% (1/1453)
 # many similar values, let us handle them all together
 # first, we will check if those are the same 78 rows
 GarageYrBlt_df_test_nulls = df_test[df_test['GarageYrBlt'].isnull()==True].index
@@ -188,7 +255,7 @@ null_garages_df_test.drop(['GarageYrBlt', 'GarageFinish', 'GarageCars', 'GarageA
 null_garages_df_test.to_csv("Post_nulls_datasets/null_garages.csv", index=False)
 df_test.drop([666, 1116], inplace=True)
 # now we can look at 76 same rows with a lot of nulls regarding the garages
-tmp = df_test[df_test['GarageYrBlt'].isnull()==True].T
+df_test[df_test['GarageYrBlt'].isnull()==True].T
 # as all garage cars and garage areas equals 0, we can presume there are no garages
 # so we will replce nulls accorind to the docs
 df_test['GarageYrBlt'].fillna(0, inplace=True)
@@ -202,15 +269,45 @@ df_nulls_test = get_nulls(df_test)
 
 
 # MSZoning - 0.27% (4/1453)	
+df_test[df_test['MSZoning'].isnull()==True].T
+# no way we can determine what value should be there. We have a few options here:
+# 1. Train model without MSZoning (same as with garages), but there were a lot of
+# columns missing, and here we may lose data that have a predictive power for the
+# sale price.
+# 2. As the values of the column are pretty imbalanced RL (count of 1111), RM (count of 238), 
+# FV (count of 73), C (count of 15), RH (count of 10) we can assume that the missing ones are
+# RL, but that is closer to a guess and may introduce some bias to the model.
+# 3. Train additional model to determine the values, i.e. the MSZoning column as the output.
+# We will go with the third one
+
 # Utilities - 0.13% (2/1453)
+df_test[df_test['Utilities'].isnull()==True].T
+# the Utilities columns in df and df_test have a count of (AllPub - 1301, NoSeWa - 1) and (AllPub - 1449)
+# respectively. There is an obvious approach of imputing the mode here.
+df_test.loc[df_test['Utilities'].isnull()] = "AllPub"
+
 # Functional - 0.13% (2/1453)
+df_test[df_test['Functional'].isnull()==True].T
+# same applicable here, according to the docs (Assume typical unless deductions are warranted)
+df_test.loc[df_test['Functional'].isnull()] = "Typ"
+
 # Exterior1st - 0.06% (1/1453)	
 # Exterior2nd - 0.06% (1/1453)
+nulls_exteriors_df_test = df_test.loc[[691]]
+# both values are missing in the same row
+# we might want to predict them separately too
+nulls_exteriors_df_test.drop(['Exterior1st', 'Exterior2nd'], axis=1, inplace=True)
+nulls_exteriors_df_test.to_csv("Post_nulls_datasets/null_exteriors.csv", index=False)
+df_test.drop([691], inplace=True)
+
 # KitchenQual - 0.06% (1/1453
-# KitchenQual - 0.06% (1/1453)
-# GarageCars - 0.06% (1/1453)
-# GarageArea - 0.06% (1/1453)
+tmp=df_test[df_test['KitchenQual'].isnull()==True].T
 # SaleType - 0.06% (1/1453)	
+
+
+
+
+# all conclusions will be revised after dealing with categorical values
 
 
 
