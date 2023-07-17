@@ -19,17 +19,19 @@ df_nulls = get_nulls(df)
 df_nulls_test = get_nulls(df_test)
 
 # PLAN
-# 1. Handle obvious nulls
-# 1. Identify the variables with null values: Determine which variables in your dataset have null values that you want to impute.
+# 1. Handle obvious nulls using statistics or logic.
+# 2. Determine the data that needs a more advanced approach to be completed.
+# a. Separate the variables: Split your dataset into two parts - one with the variables 
+# that need imputation and another with the variables that are complete.
+# b. Deal with categorical values to be able to apply IterativeImputer.
+# c. Impute missing values: Apply IterativeImputer on the part of the dataset containing 
+# the variables with null values. This will use the observed relationships in the 
+# variables to impute the missing values in the target variables.
+# d. Merge the datasets: Once the missing values are imputed, merge the imputed dataset 
+# with the complete dataset to have a complete dataset with all the variables.
+# 5. Proceed with further analysis or modeling: Now that you have a complete dataset, 
+# you can proceed with your analysis or build a predictive model using the imputed values.
 
-# 2. Separate the variables: Split your dataset into two parts - one with the variables that need imputation and another with the variables that are complete.
-
-# 3. Impute missing values: Apply IterativeImputer on the part of the dataset containing the variables with null values. This will use the observed relationships in the complete variables to impute the missing values in the target variables.
-
-# 4. Merge the datasets: Once the missing values are imputed, merge the imputed dataset with the complete dataset to have a complete dataset with all the variables.
-
-# 5. Proceed with further analysis or modeling: Now that you have a complete dataset, you can proceed with your analysis or build a predictive model using the imputed values.
-#python
 #from sklearn.experimental import enable_iterative_imputer
 #from sklearn.impute import IterativeImputer
 
@@ -47,11 +49,15 @@ df_nulls_test = get_nulls(df_test)
 
 # X_test_imputed now contains the testing data with imputed values
 
-# 2. Unobvious ones will be handled after categories are resolved
+
+
+# ------------------------- Handling obvious nulls -------------------------
+
 
 # 'PoolQC' - more than 99% missing data, only 2 non-null values, exclude it
 df.drop('PoolQC', axis=1, inplace=True)
 df_test.drop('PoolQC', axis=1, inplace=True)
+
 
 # 'Alley' - 93.9% missing values, 1229/1308
 # according to the docs 'NA' should be no alley access, so we might replace nulls with NA
@@ -59,35 +65,39 @@ df_test.drop('PoolQC', axis=1, inplace=True)
 df.drop('Alley', axis=1, inplace=True)
 df_test.drop('Alley', axis=1, inplace=True)
 
+
 # 'Fence' - 80.19% missing values, 1049 / 1308	
-# according to the docs 'NA' should be no fence, so we will replace nulls with NA
-df['Fence'].fillna("NA", inplace=True)
-df_test['Fence'].fillna("NA", inplace=True)
+# according to the docs 'NA' should be no fence, but we don't have a single 'NA' and 80% of the dat
+# is missing. It is better to exclude it
+df.drop('Fence', axis=1, inplace=True)
+df_test.drop('Fence', axis=1, inplace=True)
 
-# 'MasVnrType' - 61.31% missing values, 802 / 1308	
-# according to the docs 'NA' should be no masonry, but there are also another values absent
-# in the column, so we will check, is any isMasonry == 1 (had been created before to classify
-# absense or presence of a masonry) has a null in MasVnrType?
-df[df['isMasonry']==1]['MasVnrType'].isnull().sum() # 4
-df_test[df_test['isMasonry']==1]['MasVnrType'].isnull().sum() # 3
-# it has 4 nulls, so it is better to drop those, replace nulls with "None" and it will
-# signify that there's no masonry there
-masonry_nulls_df = df[df['isMasonry']==1]['MasVnrType'].isnull()
-masonry_nulls_df = masonry_nulls_df[masonry_nulls_df==True]
-df.drop(masonry_nulls_df.index, inplace=True)
-df['MasVnrType'].fillna("None", inplace=True)
 
-masonry_nulls_df_test = df_test[df_test['isMasonry']==1]['MasVnrType'].isnull()
-masonry_nulls_df_test = masonry_nulls_df_test[masonry_nulls_df_test==True]
-df_test.drop(masonry_nulls_df_test.index, inplace=True)
-df_test['MasVnrType'].fillna("None", inplace=True)
+# MasVnrType - 61.36% missing values, 802/1307
+# 'None' should be 'no masonry', apply this
+df.loc[(df['isMasonry']==0) & (df['MasVnrType'].isnull()==True), 'MasVnrType'] = 'None' # 798
+# others are not obvious
+df_nulls_for_iterative_imputer = df[df['MasVnrType'].isnull()==True]
+df.drop([563,694,1166,1198], inplace=True)
+
+# same for df_test
+# MasVnrType - 61.32% missing values, 891/1453
+df_test.loc[(df_test['isMasonry']==0) & (df_test['MasVnrType'].isnull()==True), 'MasVnrType'] = 'None' # 888
+df_test_nulls_for_iterative_imputer = df_test.loc[[209, 992, 1150]]
+df_test.drop([209,992,1150], inplace=True)
 
 
 df_nulls = get_nulls(df)
+df_nulls_test = get_nulls(df_test)
+
+
 # 'FireplaceQu' - 50.38% missing values, 657 / 1304	
-# according to the docs 'NA' should be no fireplace, so we will replace them with 'NA'
-df['FireplaceQu'].fillna("NA", inplace=True)
-df_test['FireplaceQu'].fillna("NA", inplace=True)
+# according to the docs 'NA' should be no fireplace
+# we will assign 'NA' to absent fireplaces
+#df[(df['isFireplace']==0) & (df['FireplaceQu'].isnull() == True)]
+df.loc[(df['isFireplace']==0) & (df['FireplaceQu'].isnull() == True), 'FireplaceQu'] = 'NA' # 657
+df_test.loc[(df_test['isFireplace']==0) & (df_test['FireplaceQu'].isnull() == True), 'FireplaceQu'] = 'NA' # 728
+
 
 # 'LotFrontage' - 17.71% missing values, 231 / 1304	
 # a continuous variable with a normal distribution, so we can replace nulls with mean
@@ -96,225 +106,208 @@ df['LotFrontage'] = imputer_mean.fit_transform(df[['LotFrontage']])
 df_test['LotFrontage'] = imputer_mean.fit_transform(df_test[['LotFrontage']])
 
 
-df_nulls = get_nulls(df)
-df_nulls_test = get_nulls(df_test)
 
 
-# FIRTHER ANALYSIS PAUSED UNTIL WE'RE DONE WITH CATEGORICAL VALUES
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # --- 'GarageType', 'GarageYrBlt', 'GarageFinish', 'GarageQual', 'GarageCond' all
 # have the exact same amount of null values (5.67% missing values, 74 / 1304) +
 # documentation states about 'NA' being  no garage and it's the only value missing.
 # Thus, we can imply all of them are values for "no garage"; let's check that
-df['GarageArea'].isnull().any() # False
-# use GarageArea as a determiner whether there is a garage or not
-no_garage_hypothesis_df = df[df['GarageArea']==0] # 74
-# 'GarageType' - 5.67% missing values, 74 / 1304	
-no_garage_hypothesis_df.index.equals(df[df['GarageType'].isnull()==True].index) # True
+# 'GarageType' - 5.67% missing values, 74 / 1304
 # 'GarageYrBlt' - 5.67% missing values, 74 / 1304
-no_garage_hypothesis_df.index.equals(df[df['GarageYrBlt'].isnull()==True].index) # True
 # 'GarageFinish' - 5.67% missing values, 74 / 1304	
-no_garage_hypothesis_df.index.equals(df[df['GarageFinish'].isnull()==True].index) # True
 # 'GarageQual' - 5.67% missing values, 74 / 1304	
-no_garage_hypothesis_df.index.equals(df[df['GarageQual'].isnull()==True].index) # True
-# 'GarageCond' - 5.67% missing values, 74 / 1304	
-no_garage_hypothesis_df.index.equals(df[df['GarageCond'].isnull()==True].index) # True
+# 'GarageCond' - 5.67% missing values, 74 / 1304
+# first we will impute rowa with 'no garage'
 
+df['isGarage'] = df['GarageType'].apply(lambda x: 0 if x=='NA' else 1)
+df_test['isGarage'] = df_test['GarageType'].apply(lambda x: 0 if x=='NA' else 1)
+df_nulls_for_iterative_imputer['isGarage'] = df_nulls_for_iterative_imputer['GarageType'].apply(lambda x: 0 if x=='NA' else 1)
+df_test_nulls_for_iterative_imputer['isGarage'] = df_test_nulls_for_iterative_imputer['GarageType'].apply(lambda x: 0 if x=='NA' else 1)
+	
+df[(df['GarageArea']==0) & (df['GarageType'].isnull()==True) & (df['GarageYrBlt'].isnull()==True) & (df['GarageFinish'].isnull()==True) & (df['GarageQual'].isnull()==True) & (df['GarageCond'].isnull()==True)] # 74
 # proved
 df['GarageYrBlt'].fillna(0, inplace=True)
 columns_to_fill = ['GarageType', 'GarageFinish', 'GarageQual', 'GarageCond']
 for col in columns_to_fill:
     df[col].fillna("NA", inplace=True)
-
     
+# same for df_test
+df_test[(df_test['GarageArea']==0)] # 76
+df_test[(df_test['GarageArea']==0) & (df_test['GarageType'].isnull()==True) & (df_test['GarageYrBlt'].isnull()==True) & (df_test['GarageFinish'].isnull()==True) & (df_test['GarageQual'].isnull()==True) & (df_test['GarageCond'].isnull()==True)] # 76
+df_test['GarageYrBlt'].fillna(0, inplace=True)
+for col in columns_to_fill:
+    df_test[col].fillna("NA", inplace=True)
+    
+    
+# 'BsmtExposure' - 	2.83% missing values, 37 / 1304	
+# according to the docs 'NA' should be no basement, we will check if there any others
+# create a column to characterize a basement by its presence or absence
+df['isBasement'] = df['TotalBsmtSF'].apply(lambda x: 1 if x > 0 else 0)
+# replace nulls where no basement for sure
+df.loc[(df['isBasement']==0) & (df['BsmtExposure'].isnull()==True), 'BsmtExposure'] = 'NA' # 36
+# unclassified ones add to the df_nulls_for_iterative_imputer
+df_nulls_for_iterative_imputer['isBasement'] = df_nulls_for_iterative_imputer['TotalBsmtSF'].apply(lambda x: 1 if x > 0 else 0)
+df_nulls_for_iterative_imputer = df_nulls_for_iterative_imputer.append(df[df['BsmtExposure'].isnull()==True], ignore_index=True)
+df = df.dropna(subset=['BsmtExposure'])
+
+# same for df_test
+# the TotalBsmtSF has 1 null in df_test so we will handle it using mean strategy as
+# the column has a normal distribution, but first we'll check if there is a basement
+df_test['isBasement'] = df_test['TotalBsmtSF'].apply(lambda x: 1 if x > 0 else 0)
+df_test.loc[(df_test['isBasement']==0) & (df_test['BsmtExposure'].isnull()==True), 'BsmtExposure'] = 'NA' # 42
+df_test['TotalBsmtSF'] = imputer_mean.fit_transform(df_test[['TotalBsmtSF']]) # 2
+df_test_nulls_for_iterative_imputer['isBasement'] = df_test_nulls_for_iterative_imputer['TotalBsmtSF'].apply(lambda x: 1 if x > 0 else 0)
+df_test_nulls_for_iterative_imputer = df_test_nulls_for_iterative_imputer.append(df_test[df_test['BsmtExposure'].isnull()==True], ignore_index=True)
+df_test = df_test.dropna(subset=['BsmtExposure'])
+
+
+df_nulls = get_nulls(df)
+df_nulls_test = get_nulls(df_test)
+
+
+# --- now, the 'BsmtFinType1', 'BsmtFinType2', 'BsmtCond', 'BsmtQual' all has the exact
+# same amount of null values. So we can imply all of them are values for "no basement"
+# 'BsmtFinType1' - 2.76% missing values, 36 / 1304	
+# 'BsmtFinType2' - 2.76% missing values, 36 / 1304
+# 'BsmtCond' - 2.76% missing values, 36 / 1304		
+# 'BsmtQual' - 2.76% missing values, 36 / 1304	
+# let's check that
+df[(df['isBasement']==0) & (df['BsmtFinType1'].isnull()==True) & (df['BsmtFinType2'].isnull()==True) & (df['BsmtCond'].isnull()==True) & (df['BsmtQual'].isnull()==True)] # 36
+# proved
+columns_to_fill = ['BsmtFinType1', 'BsmtFinType2', 'BsmtCond', 'BsmtQual']
+for col in columns_to_fill:
+    df[col].fillna("NA", inplace=True)
+    
+# same for df_test
+# 'BsmtCond' - 3.02% missing values, 44/1456
+# 'BsmtQual' - 2.95% missing values, 43/1456
+# 'BsmtFinType1' - 2.81% missing values, 41/1456
+# 'BsmtFinType2' - 2.81% missing values, 41/1456
+df_test[(df_test['isBasement']==0) & (df_test['BsmtFinType1'].isnull()==True) & (df_test['BsmtFinType2'].isnull()==True) & (df_test['BsmtCond'].isnull()==True) & (df_test['BsmtQual'].isnull()==True)] # 41
+df_test[df_test['BsmtCond'].isnull()==True].index.symmetric_difference(df_test[(df_test['isBasement']==0) & (df_test['BsmtFinType1'].isnull()==True) & (df_test['BsmtFinType2'].isnull()==True) & (df_test['BsmtCond'].isnull()==True) & (df_test['BsmtQual'].isnull()==True)].index) # 41
+df_test.loc[[580, 725, 1064]] # they have basement; append to iterative imputer, but first
+# get rid off the nan in MasVnrType because there is no massonry there
+df_test.loc[[580], 'MasVnrType'] = 'None'
+# now we may append
+df_test_nulls_for_iterative_imputer = df_test_nulls_for_iterative_imputer.append(df_test.loc[[580, 725, 1064]], ignore_index=True)
+df_test = df_test.drop([580, 725, 1064])
+# now all that are left doesn't have a masonry
+columns_to_fill = ['BsmtCond', 'BsmtQual', 'BsmtFinType1', 'BsmtFinType2']
+for col in columns_to_fill:
+    df_test[col].fillna("NA", inplace=True)
+
+
 df_nulls = get_nulls(df)
 df_nulls_test = get_nulls(df_test)
 
 
 
-# 'BsmtExposure' - 	2.83% missing values, 37 / 1304	
-# according to the docs 'NA' should be no basement, we will check if there any others
-df[df['TotalBsmtSF']==0].shape[0] # 36 rows
-df_test[df_test['TotalBsmtSF']==0].shape[0] # 40 rows
-# only they can be considered 'no basement'
-df.loc[df[df['TotalBsmtSF']==0].index, 'BsmtExposure'] = df.loc[df[df['TotalBsmtSF']==0].index, 'BsmtExposure'].fillna("NA")
-df_test.loc[df_test[df_test['TotalBsmtSF']==0].index, 'BsmtExposure'] = df_test.loc[df_test[df_test['TotalBsmtSF']==0].index, 'BsmtExposure'].fillna("NA")
-# remove the one extra
-df.drop(df[df['BsmtExposure'].isnull()==True].index, inplace=True)
-df_test.drop(df_test[df_test['BsmtExposure'].isnull()==True].index, inplace=True)
 
-# --- now, the 'BsmtFinType1', 'BsmtFinType2', 'BsmtCond', 'BsmtQual' all has the exact
-# same amount of null values. So we can imply all of them are values for "no basement"
-# let's check that
-no_basemet_hypothesis_df = df[df['TotalBsmtSF']==0] # 4
-# 'BsmtFinType1' - 2.76% missing values, 36 / 1304	
-no_basemet_hypothesis_df.index.equals(df[df['BsmtFinType1'].isnull()==True].index) # True
-# 'BsmtFinType2' - 2.76% missing values, 36 / 1304	
-no_basemet_hypothesis_df.index.equals(df[df['BsmtFinType2'].isnull()==True].index) # True
-# 'BsmtCond' - 2.76% missing values, 36 / 1304	
-no_basemet_hypothesis_df.index.equals(df[df['BsmtCond'].isnull()==True].index) # True
-# 'BsmtQual' - 2.76% missing values, 36 / 1304	
-no_basemet_hypothesis_df.index.equals(df[df['BsmtQual'].isnull()==True].index) # True
-
-# same for df_test
-no_basement_hypothesis_df_test = df_test[df_test['TotalBsmtSF']==0] # 3
-no_basement_hypothesis_df_test.index.equals(df_test[df_test['BsmtFinType1'].isnull()==True].index) # True
-no_basement_hypothesis_df_test.index.equals(df_test[df_test['BsmtFinType2'].isnull()==True].index) # True
-no_basement_hypothesis_df_test.index.equals(df_test[df_test['BsmtCond'].isnull()==True].index) # True
-no_basement_hypothesis_df_test.index.equals(df_test[df_test['BsmtQual'].isnull()==True].index) # True
-# proved
-columns_to_fill = ['BsmtFinType1', 'BsmtFinType2', 'BsmtCond', 'BsmtQual']
-for col in columns_to_fill:
-    df[col].fillna("NA", inplace=True)
-    df_test[col].fillna("NA", inplace=True)
 
 
 # 'MasVnrArea' - 0.46% missing values, 6 / 1303
-df[df['MasVnrArea'].isnull()==True]['isMasonry']
-# according to the 'isMasonery' value, all of the nulls doesn't have a masonry, so the sf = 0
-df.loc[df['MasVnrArea'].isnull(), 'MasVnrArea'] = 0
-# same is applicable to the df_test data frame:
-# 'MasVnrArea' - 1.03% missing values, 15 / 1453
-df_test[df_test['MasVnrArea'].isnull()==True]['isMasonry']
-df_test.loc[df_test['MasVnrArea'].isnull(), 'MasVnrArea'] = 0
+# MasVnrArea has a normal distribution, so we can replace nulls with mean,
+# but first we'll check absent masonries
+df.loc[(df['isMasonry']==0) & (df['MasVnrArea'].isnull()==True), 'MasVnrArea'] = 0 # 6
+
+# same for df_test
+# 'MasVnrArea' - 1.03% missing values, 15 / 1451
+df_test.loc[(df_test['isMasonry']==0) & (df_test['MasVnrArea'].isnull()==True), 'MasVnrArea'] = 0 # 15
+
+
+
+df_nulls = get_nulls(df)
+df_nulls_test = get_nulls(df_test)
+
+
 
 # 'Electrical' - 0.07% missing values, 1 / 1303
-df[df['Electrical'].isnull()==True].T
-# it is better to drop 1 row, than make a guess
-df.drop(df[df['Electrical'].isnull()].index, inplace=True)
+# not obvious, append to iterative imputer
+df_nulls_for_iterative_imputer = df_nulls_for_iterative_imputer.append(df[df['Electrical'].isnull()==True], ignore_index=True)
+df.drop([1236], inplace=True)
 
 
-df_nulls = get_nulls(df) # no more nulls here
-df_nulls_test = get_nulls(df_test) # 14 more columns here
-
-# MSZoning - 0.27% (4/1453)
-tmp=df_test[df_test['MSZoning'].isnull()==True].T
-tmp2 = df[df['LotArea']>=31250]
-df_test['LotArea'] = pd.to_numeric(df_test['LotArea'], errors='coerce')
-tmp3=df_test[df_test['LotArea']>=31250]
-
-
-tmp2 = df[(df['LotArea']>=31250) & (df['LotFrontage']>=68)]
-df_test['LotArea'] = pd.to_numeric(df_test['LotArea'], errors='coerce')
-df_test['LotFrontage'] = pd.to_numeric(df_test['LotFrontage'], errors='coerce')
-
-tmp3=df_test[(df_test['LotArea']>=31250) & (df_test['LotFrontage']>=68)]
+# only df_test nulls remain
+df_nulls_test = get_nulls(df_test)
 
 
 
+# MSZoning - 0.27% missing values, (4/1451)
+# not obvious, append to iterative imputer
+df_test_nulls_for_iterative_imputer = df_test_nulls_for_iterative_imputer.append(df_test[df_test['MSZoning'].isnull()==True], ignore_index=True)
+df_test.drop(df_test[df_test['MSZoning'].isnull()==True].index, inplace=True)
 
 
 
+# Utilities - 0.13% missing values, (1/1447)
+# not obvious, append to iterative imputer
+df_test_nulls_for_iterative_imputer = df_test_nulls_for_iterative_imputer.append(df_test[df_test['Utilities'].isnull()==True], ignore_index=True)
+df_test.drop(df_test[df_test['Utilities'].isnull()==True].index, inplace=True)
 
 
 
+# Functional - 0.06% missing values, (1/1446)
+# not obvious, append to iterative imputer
+df_test_nulls_for_iterative_imputer = df_test_nulls_for_iterative_imputer.append(df_test[df_test['Functional'].isnull()==True], ignore_index=True)
+df_test.drop(df_test[df_test['Functional'].isnull()==True].index, inplace=True)
+
+# Exterior1st - 0.06% missing values, (1/1445)	?
+# Exterior2nd - 0.06% missing values, (1/1445)?
+# not obvious, append to iterative imputer
+df_test_nulls_for_iterative_imputer = df_test_nulls_for_iterative_imputer.append(df_test[df_test['Exterior1st'].isnull()==True], ignore_index=True)
+df_test.drop(df_test[df_test['Exterior1st'].isnull()==True].index, inplace=True)
 
 
+# KitchenQual - 0.06% missing values, (1/1444)
+# not obvious, append to iterative imputer
+df_test_nulls_for_iterative_imputer = df_test_nulls_for_iterative_imputer.append(df_test[df_test['KitchenQual'].isnull()==True], ignore_index=True)
+df_test.drop(df_test[df_test['KitchenQual'].isnull()==True].index, inplace=True)
 
 
+# SaleType - 0.06% missing values, (1/1443)	
+# not obvious, append to iterative imputer
+df_test_nulls_for_iterative_imputer = df_test_nulls_for_iterative_imputer.append(df_test[df_test['SaleType'].isnull()==True], ignore_index=True)
+df_test.drop(df_test[df_test['SaleType'].isnull()==True].index, inplace=True)
 
-
-
-
-
-
-
-
-# GarageYrBlt - 5.36% (78/1453)
-# GarageFinish - 5.36% (78/1453)
-# GarageQual - 5.36% (78/1453)
-# GarageCond - 5.36% (78/1453)
-# GarageType - 5.23% (76/1453)
-# GarageCars - 0.06% (1/1453)
-# GarageArea - 0.06% (1/1453)
-# many similar values, let us handle them all together
-# first, we will check if those are the same 78 rows
-GarageYrBlt_df_test_nulls = df_test[df_test['GarageYrBlt'].isnull()==True].index
-GarageFinish_df_test_nulls = df_test[df_test['GarageFinish'].isnull()==True].index
-GarageQual_df_test_nulls = df_test[df_test['GarageQual'].isnull()==True].index
-GarageCond_df_test_nulls = df_test[df_test['GarageCond'].isnull()==True].index
-all(indexes.equals(GarageYrBlt_df_test_nulls) for indexes in [GarageFinish_df_test_nulls, GarageQual_df_test_nulls, GarageCond_df_test_nulls]) # True
-# they are the same. Now, we will check wether the GarageType's 76 rows are in those 78
-GarageType_df_test_nulls = df_test[df_test['GarageType'].isnull()==True].index
-all(GarageType_df_test_nulls.isin(GarageYrBlt_df_test_nulls)) # True
-# they are. Now, get those 2 rows of difference to handle them separately first
-GarageType_df_test_nulls.symmetric_difference(GarageYrBlt_df_test_nulls) # 666, 1116
-# both rows doesn't have a significant amount of information about garages.
-# in fact, almost all of it is missing. As we are not allowed to drop anything 
-# in a test data frame, we will save these separately to further predict values
-# with the help of a model that will not consider garages parameters 
-# (only its presence (1) or absense (0) )
-df['isGarage'] = df['GarageArea'].apply(lambda x: 1 if x > 0 else 0)
-# symbolically assign 1 to mark that garage is there. We can claim so because
-# both rows has the GarageType specified as Detached (not null or NA).
-df_test.loc[[1116], 'GarageArea'] = 1 # only for 1116 because 666 has GarageArea specified
-df_test['isGarage'] = df_test['GarageArea'].apply(lambda x: 1 if x > 0 else 0)
-null_garages_df_test = df_test.loc[[666, 1116]] # rows for the separate model
-null_garages_df_test.drop(['GarageYrBlt', 'GarageFinish', 'GarageCars', 'GarageArea', 'GarageQual', 'GarageCond'], inplace=True, axis=1)
-null_garages_df_test.to_csv("Post_nulls_datasets/null_garages.csv", index=False)
-df_test.drop([666, 1116], inplace=True)
-# now we can look at 76 same rows with a lot of nulls regarding the garages
-df_test[df_test['GarageYrBlt'].isnull()==True].T
-# as all garage cars and garage areas equals 0, we can presume there are no garages
-# so we will replce nulls accorind to the docs
-df_test['GarageYrBlt'].fillna(0, inplace=True)
-columns_to_fill = ['GarageType', 'GarageFinish', 'GarageQual', 'GarageCond']
-for col in columns_to_fill:
-    df_test[col].fillna("NA", inplace=True)
 
 
 df_nulls_test = get_nulls(df_test)
 
 
 
-# MSZoning - 0.27% (4/1453)	
-df_test[df_test['MSZoning'].isnull()==True].T
-# no way we can determine what value should be there. We have a few options here:
-# 1. Train model without MSZoning (same as with garages), but there were a lot of
-# columns missing, and here we may lose data that have a predictive power for the
-# sale price.
-# 2. As the values of the column are pretty imbalanced RL (count of 1111), RM (count of 238), 
-# FV (count of 73), C (count of 15), RH (count of 10) we can assume that the missing ones are
-# RL, but that is closer to a guess and may introduce some bias to the model.
-# 3. Train additional model to determine the values, i.e. the MSZoning column as the output.
-# We will go with the third one
+# BsmtUnfSF - 0.06% missing values,	(1/1442)	
+# no basement here
+df_test.loc[df_test['BsmtUnfSF'].isnull()==True, 'BsmtUnfSF'] = 0
 
-# Utilities - 0.13% (2/1453)
-df_test[df_test['Utilities'].isnull()==True].T
-# the Utilities columns in df and df_test have a count of (AllPub - 1301, NoSeWa - 1) and (AllPub - 1449)
-# respectively. There is an obvious approach of imputing the mode here.
-df_test.loc[df_test['Utilities'].isnull()] = "AllPub"
+# GarageCars - 0.06% missing values, (1/1442)	
+df['isGarage'] = df['GarageType'].apply(lambda x: 0 if x=='NA' else 1)
+df_test['isGarage'] = df_test['GarageType'].apply(lambda x: 0 if x=='NA' else 1)
+df_nulls_for_iterative_imputer['isGarage'] = df_nulls_for_iterative_imputer['GarageType'].apply(lambda x: 0 if x=='NA' else 1)
+df_test_nulls_for_iterative_imputer['isGarage'] = df_test_nulls_for_iterative_imputer['GarageType'].apply(lambda x: 0 if x=='NA' else 1)
+tmp=df_test[df_test['GarageCars'].isnull()==True].T
 
-# Functional - 0.13% (2/1453)
-df_test[df_test['Functional'].isnull()==True].T
-# same applicable here, according to the docs (Assume typical unless deductions are warranted)
-df_test.loc[df_test['Functional'].isnull()] = "Typ"
-
-# Exterior1st - 0.06% (1/1453)	
-# Exterior2nd - 0.06% (1/1453)
-nulls_exteriors_df_test = df_test.loc[[691]]
-# both values are missing in the same row
-# we might want to predict them separately too
-nulls_exteriors_df_test.drop(['Exterior1st', 'Exterior2nd'], axis=1, inplace=True)
-nulls_exteriors_df_test.to_csv("Post_nulls_datasets/null_exteriors.csv", index=False)
-df_test.drop([691], inplace=True)
-
-# KitchenQual - 0.06% (1/1453
-tmp=df_test[df_test['KitchenQual'].isnull()==True].T
-# SaleType - 0.06% (1/1453)	
-
-
-
-
-# all conclusions will be revised after dealing with categorical values
-
-
-
-
-# 
-
-
+# GarageArea - 0.06% missing values, (1/1442)	
+# BsmtFinSF - 0.06% missing values,	(1/1442)	
 
 
 
