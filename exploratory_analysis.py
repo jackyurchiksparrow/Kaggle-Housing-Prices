@@ -131,6 +131,9 @@ df['HouseAge'] = df['YrSold'] - df['YearBuilt']
 barplot_the_salePrice_by_x(df['HouseAge'], "HouseAge", x_ticks_step=5, rotation=45)
 # the younger the house the bigger the price
 df.drop(['MoSold', 'YrSold'], axis=1, inplace=True)
+# same for df_test
+df_test['HouseAge'] = df_test['YrSold'] - df_test['YearBuilt']
+df_test.drop(['MoSold', 'YrSold'], axis=1, inplace=True)
 
 # year remodelled is the same as construction date if not remodelled
 # we should deal with it
@@ -140,7 +143,9 @@ df[df['YearRemodAdd']!=df['YearBuilt']] # 696 rows
 # thus, we will make two columns and later leave the one with higher collinearity coefficient
 df['isRemodelled'] = df.apply(lambda x: 0 if x['YearRemodAdd'] == x['YearBuilt'] else 1, axis=1)
 df['RemodelledYearsAgo'] = df['YearRemodAdd']-df['YearBuilt']
-
+# same for df_test
+df_test['isRemodelled'] = df_test.apply(lambda x: 0 if x['YearRemodAdd'] == x['YearBuilt'] else 1, axis=1)
+df_test['RemodelledYearsAgo'] = df_test['YearRemodAdd']-df_test['YearBuilt']
 
 barplot_the_salePrice_by_x(df['isRemodelled'], "isRemodelled")
 # doesn't help in predicting
@@ -167,6 +172,19 @@ barplot_the_salePrice_by_x(df['Exterior1st'], "Exterior1st", rotation=30)
 # best are Imitation Stucco and Stone
 barplot_the_salePrice_by_x(df['Exterior2nd'], "Exterior2nd", rotation=30)
 # part of Exterior1st, should be combined together in categorical_variables_py
+# however, docs states values in Exterior1st and Exterior2nd are the same, when in fact
+# they are not
+set(df['Exterior1st'].unique()).symmetric_difference(set(df['Exterior2nd'].unique()))
+# there are typos and extra spaces, we will parse it to look according to the documentation
+df.loc[df['Exterior2nd']=='Brk Cmn', 'Exterior2nd'] = 'BrkComm'
+df.loc[df['Exterior2nd']=='CmentBd', 'Exterior2nd'] = 'CemntBd'
+df.loc[df['Exterior2nd']=='Wd Shng', 'Exterior2nd'] = 'WdShing'
+# same for df_test
+set(df_test['Exterior1st'].unique()).symmetric_difference(set(df_test['Exterior2nd'].unique()))
+df_test.loc[df_test['Exterior2nd']=='Brk Cmn', 'Exterior2nd'] = 'BrkComm'
+df_test.loc[df_test['Exterior2nd']=='CmentBd', 'Exterior2nd'] = 'CemntBd'
+df_test.loc[df_test['Exterior2nd']=='Wd Shng', 'Exterior2nd'] = 'WdShing'
+
 barplot_the_salePrice_by_x(df['MasVnrType'], "MasVnrType")
 # best is stone
 barplot_the_salePrice_by_x(df['MasVnrArea'].dropna().astype(int), "MasVnrArea", x_ticks_step=20, rotation=15)
@@ -212,6 +230,10 @@ df['BsmtFinSF1'].isnull().any()
 df['BsmtFinSF2'].isnull().any()
 df['BsmtFinSF'] = df['BsmtFinSF1'] + df['BsmtFinSF2']
 df.drop(['BsmtFinSF1', 'BsmtFinSF2'], axis=1, inplace=True)
+# same for df_test
+df_test['BsmtFinSF'] = df_test['BsmtFinSF1'] + df_test['BsmtFinSF2']
+df_test.drop(['BsmtFinSF1', 'BsmtFinSF2'], axis=1, inplace=True)
+
 barplot_the_salePrice_by_x(df['BsmtFinSF'], "BsmtFinSF", x_ticks_step=30, rotation=15, figsize=(10,6))
 # the larger is square feet the bigger the price
 barplot_the_salePrice_by_x(df['BsmtUnfSF'], "BsmtUnfSF", x_ticks_step=30, rotation=15, figsize=(10,6))
@@ -348,7 +370,10 @@ df['ShedSF'] = df.apply(lambda x: x['MiscVal'] if x['MiscFeature']=='Shed' else 
 df['isShed'] = df['MiscFeature'].apply(lambda x: 1 if x=='Shed' else 0)
 barplot_the_salePrice_by_x(df['MiscVal'], "MiscVal", x_ticks_step=2) # meaningless data
 df.drop(['MiscFeature', 'MiscVal'], axis=1, inplace=True)
-
+# same for df_test
+df_test['ShedSF'] = df_test.apply(lambda x: x['MiscVal'] if x['MiscFeature']=='Shed' else 0, axis=1)
+df_test['isShed'] = df_test['MiscFeature'].apply(lambda x: 1 if x=='Shed' else 0)
+df_test.drop(['MiscFeature', 'MiscVal'], axis=1, inplace=True)
 
 #                   --- Sale ---
 # SaleType: Type of sale

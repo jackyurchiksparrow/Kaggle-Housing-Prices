@@ -288,8 +288,6 @@ df.drop(outliers_zscore.index, inplace=True)
 RemodelledYearsAgo = df[df['RemodelledYearsAgo']>0]['RemodelledYearsAgo']
 # 609/1311 non zero values; we will create a binary column 1 - a house was
 # remodelled, 0 - was'nt. We will further make a research for multicolinearity
-df['isRemodelled'] = df['RemodelledYearsAgo'].apply(lambda x: 1 if x>0 else 0)
-df_test['isRemodelled'] = df_test['RemodelledYearsAgo'].apply(lambda x: 1 if x>0 else 0)
 sns.histplot(RemodelledYearsAgo, bins=31, kde=True)
 plt.xlabel('RemodelledYearsAgo')
 plt.show()
